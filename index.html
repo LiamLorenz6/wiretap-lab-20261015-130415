@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore binary erasure channels and the theoretical secrecy capacity of a wiretap channel.">
+  <title>Wiretap Lab · Binary erasure channels</title>
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+<main>
+  <header><span class="eyebrow">INFORMATION THEORY / EXPERIMENT 01</span>
+    <h1>Wiretap Lab<span>.</span></h1>
+    <p class="intro">One sender. Two noisy channels.<br>Explore what gets through—and what secrecy would require.</p>
+    <span class="tag">Binary erasure channel</span><span class="tag">Uncoded transmission</span>
+  </header>
+  <section class="notice" aria-label="Prototype limitations"><strong>This experiment does not implement secrecy coding.</strong> Alice sends raw bits. Eve learns every bit she receives. The secrecy capacity below is a theoretical limit achievable with suitable coding, not a security guarantee for this simulation.</section>
+  <div class="layout">
+    <section class="panel controls" aria-labelledby="settings-title">
+      <h2 id="settings-title">01 / Set the channels</h2>
+      <p>A BEC either delivers a bit unchanged or erases it. It never flips a bit.</p>
+      <label for="bob">Bob’s erasure probability <output id="bob-value" for="bob">20%</output></label>
+      <input id="bob" type="range" min="0" max="100" value="20">
+      <div class="scale"><span>Receives everything</span><span>Receives nothing</span></div>
+      <label for="eve">Eve’s erasure probability <output id="eve-value" for="eve">60%</output></label>
+      <input id="eve" type="range" min="0" max="100" value="60">
+      <div class="scale"><span>Receives everything</span><span>Receives nothing</span></div>
+      <label for="length">Bits per transmission</label>
+      <select id="length"><option>16</option><option selected>32</option><option>64</option><option>128</option></select>
+      <button id="transmit">Simulate transmission <span aria-hidden="true">→</span></button>
+      <p class="small">Each run generates fresh random bits. The two channels erase independently, one bit at a time.</p>
+    </section>
+    <section class="panel theory" aria-labelledby="theory-title">
+      <h2 id="theory-title">02 / The theoretical limit</h2>
+      <p>Secrecy capacity <span class="small">C<sub>s</sub></span></p>
+      <div class="capacity"><output id="capacity">0.40</output><span>bits per channel use</span></div>
+      <p class="formula">C<sub>s</sub> = max(0, ε<sub>E</sub> − ε<sub>B</sub>)</p>
+      <div class="meter" aria-hidden="true"><span id="capacity-bar"></span></div>
+      <p id="theory-note"></p>
+      <dl><div><dt>Bob’s channel capacity</dt><dd id="bob-capacity"></dd></div><div><dt>Eve’s channel capacity</dt><dd id="eve-capacity"></dd></div></dl>
+      <p class="small">These are asymptotic rates with appropriate coding under the stated memoryless channel model. Finite runs fluctuate. No keys, encoder, or decoder are implemented here.</p>
+    </section>
+  </div>
+  <section class="panel observations" aria-labelledby="observations-title">
+    <div class="section-heading"><h2 id="observations-title">03 / Inspect a transmission</h2><span class="small">? = erased bit · columns share the same bit position</span></div>
+    <p id="run-summary" role="status"></p>
+    <div class="bit-scroll" tabindex="0" role="region" aria-label="Transmission bits; scroll horizontally on small screens"><table id="bits-table"><caption class="sr-only">Alice’s transmitted bits and Bob’s and Eve’s received bits</caption><thead></thead><tbody></tbody></table></div>
+    <div class="results"><p><strong id="bob-count"></strong><span>bits received by Bob</span></p><p><strong id="eve-count"></strong><span>bits received by Eve</span></p><p><strong id="bob-only"></strong><span>seen by Bob, erased for Eve</span></p></div>
+    <p class="small">“Seen only by Bob” describes this sample, not secret message bits. Alice does not know which positions Eve missed, and no wiretap code turns these observations into a reliable secret message.</p>
+  </section>
+  <footer>Wyner’s wiretap channel · A learning prototype <a href="https://www.diva-portal.org/smash/get/diva2%3A404831/FULLTEXT01.pdf" target="_blank" rel="noreferrer">Theory reference ↗</a></footer>
+</main>
+</body>
+</html>
