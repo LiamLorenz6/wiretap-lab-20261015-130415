@@ -13,9 +13,9 @@
   <header><span class="eyebrow">INFORMATION THEORY / EXPERIMENT 01</span>
     <h1>Wiretap Lab<span>.</span></h1>
     <p class="intro">One sender. Two noisy channels.<br>Explore what gets through—and what secrecy would require.</p>
-    <span class="tag">Binary erasure channel</span><span class="tag">Uncoded transmission</span>
+    <span class="tag">Binary erasure channel</span><span class="tag">Repetition coding · no secrecy code</span>
   </header>
-  <section class="notice" aria-label="Prototype limitations"><strong>This experiment does not implement secrecy coding.</strong> Alice sends raw bits. Eve learns every bit she receives. The secrecy capacity below is a theoretical limit achievable with suitable coding, not a security guarantee for this simulation.</section>
+  <section class="notice" aria-label="Prototype limitations"><strong>This experiment does not implement secrecy coding.</strong> Repetition coding helps both receivers recover missing bits. It provides reliability, not secrecy; Eve can use the same decoder as Bob. The secrecy capacity below is a theoretical limit achievable with suitable coding, not a security guarantee for this simulation.</section>
   <div class="layout">
     <section class="panel controls" aria-labelledby="settings-title">
       <h2 id="settings-title">01 / Set the channels</h2>
@@ -38,6 +38,9 @@
       <select id="length"><option>16</option><option selected>32</option><option>64</option><option>128</option></select>
       <button id="randomize" class="secondary">Generate random bits</button></div>
       <p id="message-help" class="small">Text uses UTF-8, 8 bits per byte. Limit: 256 bytes / 2,048 bits. Binary may contain spaces or line breaks.</p>
+      <label for="copies">Coding / copies per message bit</label>
+      <select id="copies"><option value="1">Uncoded · rate 1</option><option value="3" selected>Repeat 3 times · rate 1/3</option><option value="5">Repeat 5 times · rate 1/5</option><option value="7">Repeat 7 times · rate 1/7</option></select>
+      <p class="small">One surviving copy recovers a bit. More copies cost more channel uses and help Eve too.</p>
       <p id="message-error" class="error" role="alert"></p>
       <button id="transmit">Simulate transmission <span aria-hidden="true">→</span></button>
       <p class="small">Each run sends the message above with fresh channel noise. The two channels erase independently, one bit at a time.</p>
@@ -50,7 +53,7 @@
       <div class="meter" aria-hidden="true"><span id="capacity-bar"></span></div>
       <p id="theory-note"></p>
       <dl><div><dt>Bob’s channel capacity</dt><dd id="bob-capacity"></dd></div><div><dt>Eve’s channel capacity</dt><dd id="eve-capacity"></dd></div></dl>
-      <p class="small">These are asymptotic rates with appropriate coding under the stated memoryless channel model. Finite runs fluctuate. UTF-8 conversion is representation, not secrecy coding. No keys or error-correcting code are implemented here.</p>
+      <p class="small">These are asymptotic rates with appropriate coding under the stated memoryless channel model. Finite runs fluctuate. UTF-8 is representation; repetition is erasure correction. Neither is secrecy coding, even when the chosen code rate is below secrecy capacity.</p>
     </section>
   </div>
   <section class="panel observations" aria-labelledby="observations-title">
@@ -59,18 +62,20 @@
     <div class="pipeline" aria-label="Message transmission flow">
       <div class="stage"><h3>Alice’s input</h3><pre id="source-message" dir="auto"></pre></div>
       <div class="flow-arrow" aria-hidden="true">↓</div>
-      <div class="stage"><h3>Transmitted bits <span class="small">UTF-8 for text · unchanged for binary</span></h3><pre id="sent-bits"></pre></div>
+      <div class="stage"><h3>Message bits <span class="small">UTF-8 for text · unchanged for binary</span></h3><pre id="message-bits"></pre></div>
+      <div class="flow-arrow" aria-hidden="true">↓ Encode ↓</div>
+      <div class="stage"><h3>Transmitted codeword</h3><p id="code-summary" class="small"></p><pre id="sent-bits"></pre></div>
       <div class="flow-arrow" aria-hidden="true">↓ Independent BECs ↓</div>
       <div class="receivers">
-        <div class="stage"><h3>Bob’s received bits</h3><pre id="bob-bits"></pre><div class="flow-arrow" aria-hidden="true">↓</div><h3>Bob’s recovered text</h3><pre id="bob-text" dir="auto"></pre></div>
-        <div class="stage"><h3>Eve’s received bits</h3><pre id="eve-bits"></pre><div class="flow-arrow" aria-hidden="true">↓</div><h3>Eve’s recovered text</h3><pre id="eve-text" dir="auto"></pre></div>
+        <div class="stage"><h3>Bob’s received bits</h3><pre id="bob-bits"></pre><div class="flow-arrow" aria-hidden="true">↓ Decode ↓</div><h3>Bob’s recovered message bits</h3><pre id="bob-decoded"></pre><p id="bob-recovery" class="small"></p><div class="flow-arrow" aria-hidden="true">↓ UTF-8 ↓</div><h3>Bob’s recovered text</h3><pre id="bob-text" dir="auto"></pre></div>
+        <div class="stage"><h3>Eve’s received bits</h3><pre id="eve-bits"></pre><div class="flow-arrow" aria-hidden="true">↓ Decode ↓</div><h3>Eve’s recovered message bits</h3><pre id="eve-decoded"></pre><p id="eve-recovery" class="small"></p><div class="flow-arrow" aria-hidden="true">↓ UTF-8 ↓</div><h3>Eve’s recovered text</h3><pre id="eve-text" dir="auto"></pre></div>
       </div>
       <p class="small">? = erased bit. □ = byte with at least one erased bit. � = invalid or incomplete UTF-8. Text is decoded only from received bytes; missing data is never guessed. Binary inputs need a multiple of 8 bits for text interpretation; arbitrary binary may not represent readable UTF-8. Invisible characters are shown as escape sequences.</p>
     </div>
     <details><summary>Compare every bit position</summary>
     <div class="bit-scroll" tabindex="0" role="region" aria-label="Transmission bits; scroll horizontally on small screens"><table id="bits-table"><caption class="sr-only">Alice’s transmitted bits and Bob’s and Eve’s received bits</caption><thead></thead><tbody></tbody></table></div></details>
-    <div class="results"><p><strong id="bob-count"></strong><span>bits received by Bob</span></p><p><strong id="eve-count"></strong><span>bits received by Eve</span></p><p><strong id="bob-only"></strong><span>seen by Bob, erased for Eve</span></p></div>
-    <p class="small">“Seen only by Bob” describes this sample, not secret message bits. Alice does not know which positions Eve missed, and no wiretap code turns these observations into a reliable secret message.</p>
+    <div class="results"><p><strong id="bob-count"></strong><span>message bits recovered by Bob</span></p><p><strong id="eve-count"></strong><span>message bits recovered by Eve</span></p><p><strong id="bob-only"></strong><span>message bits recovered only by Bob</span></p></div>
+    <p class="small">“Recovered only by Bob” describes this sample, not secret message bits. Alice does not know which positions Eve missed, and no wiretap code turns these observations into a reliable secret message.</p>
   </section>
   <footer>Wyner’s wiretap channel · A learning prototype <a href="https://www.diva-portal.org/smash/get/diva2%3A404831/FULLTEXT01.pdf" target="_blank" rel="noreferrer">Theory reference ↗</a></footer>
 </main>

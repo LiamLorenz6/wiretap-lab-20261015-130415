@@ -23,6 +23,6 @@ test('theory handles channel ordering, equality, and extremes', () => {
 test('simulation samples Bob and Eve independently from the same uncoded input', () => {
   const draws = [.1, .9, .9, .1];
   const result = simulate({ bits: [0, 1], bobChannel: bec(.5), eveChannel: bec(.5), random: () => draws.shift() });
-  assert.deepEqual(result, { transmitted: [0, 1], bob: [null, 1], eve: [0, null] });
+  assert.deepEqual(result, { transmitted: [0, 1], bob: [null, 1], eve: [0, null], bobDecoded: [null, 1], eveDecoded: [0, null] });
   assert.deepEqual(randomBits(3, () => .7), [1, 1, 1]);
 });

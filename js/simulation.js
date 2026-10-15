@@ -1,5 +1,6 @@
-// Coding is deliberately explicit: this prototype sends the input unchanged.
-export const uncoded = { encode: bits => [...bits] };
+import { repetitionCode } from './coding.js';
+
+export const uncoded = repetitionCode(1);
 
 export function randomBits(length, random = Math.random) {
   if (!Number.isInteger(length) || length < 1) throw new RangeError('Length must be a positive integer.');
@@ -8,9 +9,7 @@ export function randomBits(length, random = Math.random) {
 
 export function simulate({ bits, bobChannel, eveChannel, code = uncoded, random = Math.random }) {
   const transmitted = code.encode(bits);
-  return {
-    transmitted,
-    bob: bobChannel.transmit(transmitted, random),
-    eve: eveChannel.transmit(transmitted, random),
-  };
+  const bob = bobChannel.transmit(transmitted, random);
+  const eve = eveChannel.transmit(transmitted, random);
+  return { transmitted, bob, eve, bobDecoded: code.decode(bob), eveDecoded: code.decode(eve) };
 }

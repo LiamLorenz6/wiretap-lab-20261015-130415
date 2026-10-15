@@ -1,6 +1,6 @@
 # Wiretap Lab
 
-A small, dependency-free BEC wiretap-channel learning prototype. This sends raw random bits: **it does not implement secrecy coding or guarantee secrecy**.
+A small, dependency-free BEC wiretap-channel learning prototype. Send text or binary with uncoded or repetition-coded transmission. **This does not implement secrecy coding or guarantee secrecy**.
 
 ## Run locally
 
@@ -30,3 +30,12 @@ Theory reference: [Coding for the Wiretap Channel, Chapter 2](https://www.diva-p
 Choose Words / text to send your own UTF-8 message, or Binary to enter bits (whitespace is allowed). Text is limited to 256 UTF-8 bytes; binary is limited to 2,048 bits. The random-bit generator remains available in Binary mode. Clicking Simulate sends the same input with fresh noise. Channel changes also run the simulation; editing a message leaves the previous result visible until you simulate again.
 
 `js/messages.js` handles conversion independently of coding and channels. The flow shows Alice's input → transmitted bits → received bits → recovered text for each receiver. A byte containing any erased bit displays as □. Known byte runs decode independently; incomplete or invalid UTF-8 displays as �. This intentionally does not guess erased data or consult the original text to reconstruct characters. Binary inputs whose length is not divisible by eight show bits without a text interpretation. Control characters are escaped for visibility.
+
+
+## Repetition coding
+
+The default is 3 copies per message bit (rate 1/3); choose uncoded, 3, 5, or 7 copies. `js/coding.js` exposes encode, decode, and rate. Both Bob and Eve use the same decoder: a bit is recovered if any copy survives; otherwise it stays unknown. The decoder receives channel observations only.
+
+For independent BEC erasures, a repeated bit remains erased with probability ε^r. A whole byte is recovered with probability (1 − ε^r)^8. With εB = .2, εE = .6, and r = 3, these byte recovery probabilities are about 93.8% and 14.3%. These are expectations, not guarantees for one transmission or word recovery rates. Multibyte characters require several bytes. Increasing repetition improves Eve's recovery too; no secrecy is claimed. The secrecy-capacity display still describes the underlying channel, not the achieved rate of this code.
+
+The pipeline distinguishes message bits, transmitted codeword, raw received codeword, decoded message bits, and recovered text. Summary counts refer to decoded message positions; the expandable table compares raw channel-use positions. Text conversion and channel/coding modules remain separate. Repetition is currently BEC-specific and is not a majority decoder for a BSC.

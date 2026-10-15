@@ -1,3 +1,4 @@
+import { repetitionCode } from './coding.js';
 import { binaryErasureChannel, becSecrecyCapacity } from './channels.js';
 import { randomBits, simulate } from './simulation.js';
 import { textToBits, parseBinary, formatBits, bitsToText, MAX_MESSAGE_BITS } from './messages.js';
@@ -35,12 +36,24 @@ function render() {
     return;
   }
   $('message-error').textContent = '';
-  const result = simulate({ bits, bobChannel, eveChannel });
+  const copies = Number($('copies').value);
+  const code = repetitionCode(copies);
+  const result = simulate({ bits, bobChannel, eveChannel, code });
+  $('message-bits').textContent = formatBits(bits);
+  $('code-summary').textContent = `${bits.length} message bits → ${result.transmitted.length} channel uses · rate 1/${copies} = ${code.rate.toFixed(3)} message bits/use. Consecutive groups of ${copies} carry one message bit.`;
   $('source-message').textContent = mode() === 'text' ? visibleText($('message-text').value) : formatBits(bits);
   $('sent-bits').textContent = formatBits(result.transmitted);
   for (const receiver of ['bob', 'eve']) {
     $(`${receiver}-bits`).textContent = formatBits(result[receiver]);
-    const text = bitsToText(result[receiver]);
+    const decoded = result[`${receiver}Decoded`];
+    $(`${receiver}-decoded`).textContent = formatBits(decoded);
+    const recovered = decoded.filter(bit => bit !== null).length;
+    const probability = receiver === 'bob' ? bobErasure : eveErasure;
+    const expectedBit = 1 - code.residualErasure(probability);
+    const wholeBytes = Math.floor(decoded.length / 8);
+    const recoveredBytes = Array.from({ length: wholeBytes }, (_, i) => decoded.slice(i * 8, i * 8 + 8).every(bit => bit !== null)).filter(Boolean).length;
+    $(`${receiver}-recovery`).textContent = `${recovered}/${bits.length} message bits recovered${wholeBytes ? ` · ${recoveredBytes}/${wholeBytes} complete bytes` : ''}. Expected bit recovery: ${(expectedBit * 100).toFixed(1)}%; expected full-byte recovery: ${(expectedBit ** 8 * 100).toFixed(1)}%.`;
+    const text = bitsToText(decoded);
     $(`${receiver}-text`).textContent = text === null
       ? 'Text unavailable: the bit count is not a multiple of 8.' : visibleText(text);
   }
@@ -69,14 +82,14 @@ function render() {
   });
   $('bits-table').tBodies[0].replaceChildren(...rows);
   const received = bits => bits.filter(bit => bit !== null).length;
-  $('bob-count').textContent = `${received(result.bob)} / ${n}`;
-  $('eve-count').textContent = `${received(result.eve)} / ${n}`;
-  $('bob-only').textContent = result.bob.filter((bit, i) => bit !== null && result.eve[i] === null).length;
-  $('run-summary').textContent = `Transmission ${++run} · ${n} uncoded bits · Bob ε = ${bobErasure.toFixed(2)} · Eve ε = ${eveErasure.toFixed(2)}`;
+  $('bob-count').textContent = `${received(result.bobDecoded)} / ${bits.length}`;
+  $('eve-count').textContent = `${received(result.eveDecoded)} / ${bits.length}`;
+  $('bob-only').textContent = result.bobDecoded.filter((bit, i) => bit !== null && result.eveDecoded[i] === null).length;
+  $('run-summary').textContent = `Transmission ${++run} · ${bits.length} message bits → ${n} channel uses · ${copies === 1 ? 'uncoded' : `${copies}× repetition`} · Bob ε = ${bobErasure.toFixed(2)} · Eve ε = ${eveErasure.toFixed(2)}`;
 }
 
 $('transmit').addEventListener('click', render);
-for (const id of ['bob', 'eve']) $(id).addEventListener('input', render);
+for (const id of ['bob', 'eve', 'copies']) $(id).addEventListener('input', render);
 for (const radio of document.querySelectorAll('input[name="mode"]')) radio.addEventListener('change', () => {
   $('text-input').hidden = mode() !== 'text';
   $('binary-input').hidden = mode() !== 'binary';
