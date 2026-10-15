@@ -26,10 +26,21 @@
       <label for="eve">Eve’s erasure probability <output id="eve-value" for="eve">60%</output></label>
       <input id="eve" type="range" min="0" max="100" value="60">
       <div class="scale"><span>Receives everything</span><span>Receives nothing</span></div>
-      <label for="length">Bits per transmission</label>
+      <fieldset class="message-mode"><legend>Message format</legend>
+        <label><input type="radio" name="mode" value="text" checked> Words / text</label>
+        <label><input type="radio" name="mode" value="binary"> Binary</label>
+      </fieldset>
+      <div id="text-input"><label for="message-text">Alice’s message</label>
+        <textarea id="message-text" rows="3" aria-describedby="message-help">Hello Bob!</textarea></div>
+      <div id="binary-input" hidden><label for="message-binary">Alice’s bits</label>
+        <textarea id="message-binary" rows="3" spellcheck="false" aria-describedby="message-help">01001000 01101001</textarea>
+      <label for="length">Random message length</label>
       <select id="length"><option>16</option><option selected>32</option><option>64</option><option>128</option></select>
+      <button id="randomize" class="secondary">Generate random bits</button></div>
+      <p id="message-help" class="small">Text uses UTF-8, 8 bits per byte. Limit: 256 bytes / 2,048 bits. Binary may contain spaces or line breaks.</p>
+      <p id="message-error" class="error" role="alert"></p>
       <button id="transmit">Simulate transmission <span aria-hidden="true">→</span></button>
-      <p class="small">Each run generates fresh random bits. The two channels erase independently, one bit at a time.</p>
+      <p class="small">Each run sends the message above with fresh channel noise. The two channels erase independently, one bit at a time.</p>
     </section>
     <section class="panel theory" aria-labelledby="theory-title">
       <h2 id="theory-title">02 / The theoretical limit</h2>
@@ -39,13 +50,25 @@
       <div class="meter" aria-hidden="true"><span id="capacity-bar"></span></div>
       <p id="theory-note"></p>
       <dl><div><dt>Bob’s channel capacity</dt><dd id="bob-capacity"></dd></div><div><dt>Eve’s channel capacity</dt><dd id="eve-capacity"></dd></div></dl>
-      <p class="small">These are asymptotic rates with appropriate coding under the stated memoryless channel model. Finite runs fluctuate. No keys, encoder, or decoder are implemented here.</p>
+      <p class="small">These are asymptotic rates with appropriate coding under the stated memoryless channel model. Finite runs fluctuate. UTF-8 conversion is representation, not secrecy coding. No keys or error-correcting code are implemented here.</p>
     </section>
   </div>
   <section class="panel observations" aria-labelledby="observations-title">
     <div class="section-heading"><h2 id="observations-title">03 / Inspect a transmission</h2><span class="small">? = erased bit · columns share the same bit position</span></div>
     <p id="run-summary" role="status"></p>
-    <div class="bit-scroll" tabindex="0" role="region" aria-label="Transmission bits; scroll horizontally on small screens"><table id="bits-table"><caption class="sr-only">Alice’s transmitted bits and Bob’s and Eve’s received bits</caption><thead></thead><tbody></tbody></table></div>
+    <div class="pipeline" aria-label="Message transmission flow">
+      <div class="stage"><h3>Alice’s input</h3><pre id="source-message" dir="auto"></pre></div>
+      <div class="flow-arrow" aria-hidden="true">↓</div>
+      <div class="stage"><h3>Transmitted bits <span class="small">UTF-8 for text · unchanged for binary</span></h3><pre id="sent-bits"></pre></div>
+      <div class="flow-arrow" aria-hidden="true">↓ Independent BECs ↓</div>
+      <div class="receivers">
+        <div class="stage"><h3>Bob’s received bits</h3><pre id="bob-bits"></pre><div class="flow-arrow" aria-hidden="true">↓</div><h3>Bob’s recovered text</h3><pre id="bob-text" dir="auto"></pre></div>
+        <div class="stage"><h3>Eve’s received bits</h3><pre id="eve-bits"></pre><div class="flow-arrow" aria-hidden="true">↓</div><h3>Eve’s recovered text</h3><pre id="eve-text" dir="auto"></pre></div>
+      </div>
+      <p class="small">? = erased bit. □ = byte with at least one erased bit. � = invalid or incomplete UTF-8. Text is decoded only from received bytes; missing data is never guessed. Binary inputs need a multiple of 8 bits for text interpretation; arbitrary binary may not represent readable UTF-8. Invisible characters are shown as escape sequences.</p>
+    </div>
+    <details><summary>Compare every bit position</summary>
+    <div class="bit-scroll" tabindex="0" role="region" aria-label="Transmission bits; scroll horizontally on small screens"><table id="bits-table"><caption class="sr-only">Alice’s transmitted bits and Bob’s and Eve’s received bits</caption><thead></thead><tbody></tbody></table></div></details>
     <div class="results"><p><strong id="bob-count"></strong><span>bits received by Bob</span></p><p><strong id="eve-count"></strong><span>bits received by Eve</span></p><p><strong id="bob-only"></strong><span>seen by Bob, erased for Eve</span></p></div>
     <p class="small">“Seen only by Bob” describes this sample, not secret message bits. Alice does not know which positions Eve missed, and no wiretap code turns these observations into a reliable secret message.</p>
   </section>

@@ -1,8 +1,13 @@
 import { binaryErasureChannel, becSecrecyCapacity } from './channels.js';
 import { randomBits, simulate } from './simulation.js';
+import { textToBits, parseBinary, formatBits, bitsToText, MAX_MESSAGE_BITS } from './messages.js';
 
 const $ = id => document.getElementById(id);
 let run = 0;
+
+const mode = () => document.querySelector('input[name="mode"]:checked').value;
+// JSON escaping makes control characters visible while preserving Unicode letters.
+const visibleText = text => JSON.stringify(text).slice(1, -1);
 
 function render() {
   const bobErasure = Number($('bob').value) / 100;
@@ -20,7 +25,25 @@ function render() {
     ? 'Bob has the better channel. Suitable wiretap coding can exploit this advantage for reliable, secret communication.'
     : 'Eve’s channel is at least as good as Bob’s. The theoretical secrecy capacity for this model is zero.';
 
-  const result = simulate({ bits: randomBits(Number($('length').value)), bobChannel, eveChannel });
+  let bits;
+  try {
+    bits = mode() === 'text' ? textToBits($('message-text').value) : parseBinary($('message-binary').value);
+    if (!bits.length) throw new Error('Enter a message before simulating.');
+    if (bits.length > MAX_MESSAGE_BITS) throw new Error('Message is too long. Use at most 256 UTF-8 bytes or 2,048 bits.');
+  } catch (error) {
+    $('message-error').textContent = error.message;
+    return;
+  }
+  $('message-error').textContent = '';
+  const result = simulate({ bits, bobChannel, eveChannel });
+  $('source-message').textContent = mode() === 'text' ? visibleText($('message-text').value) : formatBits(bits);
+  $('sent-bits').textContent = formatBits(result.transmitted);
+  for (const receiver of ['bob', 'eve']) {
+    $(`${receiver}-bits`).textContent = formatBits(result[receiver]);
+    const text = bitsToText(result[receiver]);
+    $(`${receiver}-text`).textContent = text === null
+      ? 'Text unavailable: the bit count is not a multiple of 8.' : visibleText(text);
+  }
   const n = result.transmitted.length;
   const head = document.createElement('tr');
   for (const label of ['Bit', ...Array.from({ length: n }, (_, i) => i + 1)]) {
@@ -53,5 +76,18 @@ function render() {
 }
 
 $('transmit').addEventListener('click', render);
-for (const id of ['bob', 'eve', 'length']) $(id).addEventListener('input', render);
+for (const id of ['bob', 'eve']) $(id).addEventListener('input', render);
+for (const radio of document.querySelectorAll('input[name="mode"]')) radio.addEventListener('change', () => {
+  $('text-input').hidden = mode() !== 'text';
+  $('binary-input').hidden = mode() !== 'binary';
+  render();
+});
+$('randomize').addEventListener('click', () => {
+  $('message-binary').value = formatBits(randomBits(Number($('length').value)));
+  render();
+});
+for (const id of ['message-text', 'message-binary']) $(id).addEventListener('input', () => {
+  $('message-error').textContent = '';
+  $('run-summary').textContent = 'Message edited. Click Simulate transmission to update the results below.';
+});
 render();
