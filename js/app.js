@@ -48,6 +48,7 @@ function render() {
     const decoded = result[`${receiver}Decoded`];
     $(`${receiver}-decoded`).textContent = formatBits(decoded);
     const recovered = decoded.filter(bit => bit !== null).length;
+    $(`${receiver}-meter`).style.width = `${recovered / bits.length * 100}%`;
     const probability = receiver === 'bob' ? bobErasure : eveErasure;
     const expectedBit = 1 - code.residualErasure(probability);
     const wholeBytes = Math.floor(decoded.length / 8);
@@ -88,7 +89,13 @@ function render() {
   $('run-summary').textContent = `Transmission ${++run} · ${bits.length} message bits → ${n} channel uses · ${copies === 1 ? 'uncoded' : `${copies}× repetition`} · Bob ε = ${bobErasure.toFixed(2)} · Eve ε = ${eveErasure.toFixed(2)}`;
 }
 
-$('transmit').addEventListener('click', render);
+$('transmit').addEventListener('click', () => {
+  render();
+  const panel = document.querySelector('.observations');
+  panel.classList.remove('just-transmitted');
+  void panel.offsetWidth;
+  panel.classList.add('just-transmitted');
+});
 for (const id of ['bob', 'eve', 'copies']) $(id).addEventListener('input', render);
 for (const radio of document.querySelectorAll('input[name="mode"]')) radio.addEventListener('change', () => {
   $('text-input').hidden = mode() !== 'text';
